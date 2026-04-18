@@ -11,7 +11,7 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v2
+        uses: actions/checkout@v4
 
       - name: Deploy Via SSH
         uses: appleboy/ssh-action@v1.0.3
@@ -22,5 +22,5 @@ jobs:
           script: |
             cd /root/Nodejs-application-CICD-pipeline
             git pull
-            docker-  compose up -d --build
+            docker-compose up -d --build
 
