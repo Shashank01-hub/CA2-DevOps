@@ -1,4 +1,4 @@
-name: NodeJS Application CI/CD Pipeline
+name: NodeJS Application CI Pipeline
 
 on:
   push:
@@ -6,41 +6,25 @@ on:
       - main
 
 jobs:
-  deploy:
+  ci:
     runs-on: ubuntu-latest
 
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Deploy Via SSH
-        uses: appleboy/ssh-action@v1.2.0
+      - name: Setup Node
+        uses: actions/setup-node@v4
         with:
-          host: ${{ secrets.SSH_HOST }}
-          username: root
-          key: ${{ secrets.SSH_KEY }}
-          script_stop: true
-          script: |
-            set -e
+          node-version: 22
+          cache: npm
 
-            APP_DIR="/root/Nodejs-application-CICD-pipeline"
-            REPO_URL="https://github.com/${{ github.repository }}.git"
+      - name: Install dependencies
+        run: npm ci
 
-            if [ ! -d "$APP_DIR/.git" ]; then
-              rm -rf "$APP_DIR"
-              git clone "$REPO_URL" "$APP_DIR"
-            fi
+      - name: Validate JavaScript syntax
+        run: node --check index.js
 
-            cd "$APP_DIR"
-            git fetch --all
-            git reset --hard "origin/${{ github.ref_name }}"
-
-            if docker compose version >/dev/null 2>&1; then
-              docker compose up -d --build
-            elif command -v docker-compose >/dev/null 2>&1; then
-              docker-compose up -d --build
-            else
-              echo "Neither 'docker compose' nor 'docker-compose' is installed on the server."
-              exit 1
-            fi
+      - name: Build Docker image
+        run: docker build -t ca2-ci .
 
