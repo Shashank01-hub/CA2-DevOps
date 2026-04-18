@@ -14,13 +14,33 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Deploy Via SSH
-        uses: appleboy/ssh-action@v1.0.3
+        uses: appleboy/ssh-action@v1.2.0
         with:
           host: ${{ secrets.SSH_HOST }}
           username: root
           key: ${{ secrets.SSH_KEY }}
+          script_stop: true
           script: |
-            cd /root/Nodejs-application-CICD-pipeline
-            git pull
-            docker-compose up -d --build
+            set -e
+
+            APP_DIR="/root/Nodejs-application-CICD-pipeline"
+            REPO_URL="https://github.com/${{ github.repository }}.git"
+
+            if [ ! -d "$APP_DIR/.git" ]; then
+              rm -rf "$APP_DIR"
+              git clone "$REPO_URL" "$APP_DIR"
+            fi
+
+            cd "$APP_DIR"
+            git fetch --all
+            git reset --hard "origin/${{ github.ref_name }}"
+
+            if docker compose version >/dev/null 2>&1; then
+              docker compose up -d --build
+            elif command -v docker-compose >/dev/null 2>&1; then
+              docker-compose up -d --build
+            else
+              echo "Neither 'docker compose' nor 'docker-compose' is installed on the server."
+              exit 1
+            fi
 
